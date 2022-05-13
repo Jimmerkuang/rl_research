@@ -10,6 +10,7 @@ permalink: https://perma.cc/6Z2N-PFWC
 import math
 from typing import Optional
 
+import torch
 import numpy as np
 
 import gym
@@ -108,7 +109,7 @@ class MountainCarEnv(gym.Env):
         reward = -1.0
 
         self.state = (position, velocity)
-        return np.array(self.state, dtype=np.float32), reward, done, {}
+        return torch.Tensor(self.state).float(), reward, done, {}
 
     def reset(
         self,
@@ -119,9 +120,9 @@ class MountainCarEnv(gym.Env):
     ):
         self.state = np.array([0, 0])
         if not return_info:
-            return np.array(self.state, dtype=np.float32)
+            return torch.Tensor(self.state).float()
         else:
-            return np.array(self.state, dtype=np.float32), {}
+            return torch.Tensor(self.state).float(), {}
 
     def _height(self, xs):
         return np.sin(3 * xs) * 0.45 + 0.55
