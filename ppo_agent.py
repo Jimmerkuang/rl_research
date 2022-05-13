@@ -4,6 +4,7 @@
 
 
 import os
+import matplotlib.pyplot as plt
 import time
 import torch
 import torch.nn as nn
@@ -43,11 +44,10 @@ class Critic(nn.Module):
 
 
 class PPO(object):
+    batch_size = 32
     clip_param = 0.2
     max_grad_norm = 0.5
     ppo_update_time = 10
-    buffer_capacity = 8000
-    batch_size = 32
 
     def __init__(self):
         super(PPO, self).__init__()
@@ -65,7 +65,7 @@ class PPO(object):
             os.makedirs('./param/img')
 
     def select_action(self, state):
-        state = torch.from_numpy(state).float().unsqueeze(0)
+        state = state.float().unsqueeze(0)
         with torch.no_grad():
             action_prob = self.actor_net(state)
         c = Categorical(action_prob)
@@ -73,21 +73,20 @@ class PPO(object):
         return action.item(), action_prob[:, action.item()].item()
 
     def get_value(self, state):
-        state = torch.from_numpy(state)
         with torch.no_grad():
             value = self.critic_net(state)
         return value.item()
 
     def save_param(self):
-        torch.save(self.actor_net.state_dict(), './param/net_param/actor_net' + str(time.time())[:10] +'.pkl')
-        torch.save(self.critic_net.state_dict(), './param/net_param/critic_net' + str(time.time())[:10] +'.pkl')
+        torch.save(self.actor_net.state_dict(), './param/net_param/actor_net' + str(time.time())[:10] + '.pkl')
+        torch.save(self.critic_net.state_dict(), './param/net_param/critic_net' + str(time.time())[:10] + '.pkl')
 
     def store_transition(self, transition):
         self.buffer.append(transition)
         self.counter += 1
 
     def update(self, i_ep):
-        state = torch.tensor([t.state for t in self.buffer], dtype=torch.float)
+        state = torch.vstack([t.state for t in self.buffer])
         action = torch.tensor([t.action for t in self.buffer], dtype=torch.long).view(-1, 1)
         reward = [t.reward for t in self.buffer]
         # update: don't need next_state
@@ -140,9 +139,9 @@ class PPO(object):
 
 def main():
     agent = PPO()
-    for i_epoch in range(1000):
+    durations = []
+    for i_episode in range(500):
         state = env.reset()
-        done = False
         if render:
             env.render()
         for t in count():
@@ -155,21 +154,25 @@ def main():
             state = next_state
             if done:
                 if len(agent.buffer) >= agent.batch_size:
-                    agent.update(i_epoch)
-                agent.writer.add_scalar('Steptime/steptime', t, global_step=i_epoch)
+                    agent.update(i_episode)
+                agent.writer.add_scalar('Steptime/steptime', t, global_step=i_episode)
+                print(f'agent used {t} steps in episode {i_episode}.')
+                durations.append(t)
                 break
+    plt.plot(range(len(durations)), durations)
+    plt.show()
+
 
 # Parameters
 gamma = 0.99
-render = True
+render = False
 seed = 1
-log_interval = 10
 
 env = MountainCarEnv()
 num_state = env.observation_space.shape[0]
 num_action = env.action_space.n
-torch.manual_seed(seed)
-env.seed(seed)
+# torch.manual_seed(seed)
+# env.seed(seed)
 Transition = namedtuple('Transition', ['state', 'action', 'a_log_prob', 'reward', 'next_state'])
 
 
