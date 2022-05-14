@@ -48,8 +48,8 @@ class PG(object):
         self.actor = Actor()
         self.critic = Critic()
         self.buffer = []
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.02)
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=0.02)
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.001)
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=0.003)
 
     def select_action(self, state):
         state = torch.from_numpy(state).float().view(-1, num_state)
@@ -89,7 +89,7 @@ class PG(object):
         advantage = (dis_rewards - state_value).detach()
         self.actor_optimizer.zero_grad()
         self.critic_optimizer.zero_grad()
-        action_loss = (-action_log_prob * advantage).mean()
+        action_loss = (-action_log_prob * advantage).sum() / len(self.buffer)
         value_loss = F.mse_loss(state_value, dis_rewards)
         action_loss.backward()
         value_loss.backward()
