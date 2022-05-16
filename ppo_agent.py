@@ -42,13 +42,13 @@ class Critic(nn.Module):
         return value
 
 
-class PG(object):
+class PPO(object):
     clip_param = 0.2
     max_grad_norm = 0.5
     ppo_update_time = 10
 
     def __init__(self):
-        super(PG, self).__init__()
+        super(PPO, self).__init__()
         self.actor = Actor()
         self.critic = Critic()
         self.buffer = []
@@ -89,8 +89,8 @@ class PG(object):
     def update(self):
         state, action, dis_rewards, old_action_prob = self.prepare_training_data_from_buffer()
         print("The agent is updating by PPO...")
-        for i in range(self.ppo_update_time):
-            for index in BatchSampler(SubsetRandomSampler(range(state.shape[0])), 32, False):
+        for _ in range(self.ppo_update_time):
+            for index in BatchSampler(SubsetRandomSampler(range(state.shape[0])), 256, False):
                 state_value = self.critic(state[index])
                 advantage = (dis_rewards[index] - state_value).detach()
                 action_prob = self.actor(state[index]).gather(1, action[index])
@@ -112,7 +112,7 @@ class PG(object):
 
 
 def main():
-    agent = PG()
+    agent = PPO()
     durations = []
     for i_episode in tqdm(range(num_episode)):
         state = env.reset()
@@ -146,8 +146,8 @@ seed = 1
 env = MountainCarEnv()
 num_state = env.observation_space.shape[0]
 num_action = env.action_space.n
-torch.manual_seed(seed)
-env.seed(seed)
+# torch.manual_seed(seed)
+# env.seed(seed)
 Transition = namedtuple('Transition', ['state', 'action', 'action_prob', 'reward', 'next_state'])
 
 
